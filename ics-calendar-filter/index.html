@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filtro de Calendario Académico ICS</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FullCalendar -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales-all.global.min.js"></script>
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Encabezado / Navegación -->
+  <header class="bg-indigo-700 text-white p-4 shadow-md flex flex-wrap justify-between items-center gap-4">
+    <h1 class="text-xl font-bold tracking-wide">Filtro de Calendario Académico ICS</h1>
+    <div class="flex items-center gap-3">
+      <span class="text-indigo-100 text-xs sm:text-sm font-medium flex items-center gap-1.5 bg-indigo-800/60 px-3 py-1.5 rounded-lg border border-indigo-500/40">
+        <strong>Paso 1:</strong> Selecciona tu archivo .ICS para empezar <span>👉</span>
+      </span>
+      <input type="file" id="ics-file-input" accept=".ics" class="hidden" onchange="handleFileSelect(event)">
+      <button onclick="document.getElementById('ics-file-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
+        <span>📁</span> Abrir archivo .ICS
+      </button>
+      <button id="export-btn" onclick="exportFilteredICS()" disabled class="bg-green-600 hover:bg-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2">
+        <span>💾</span> Exportar ICS Filtrado
+      </button>
+    </div>
+  </header>
+
+  <!-- Panel Principal Grid -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Columna Izquierda: Filtros -->
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-lg font-semibold text-gray-700">Filtros de Asignaturas</h2>
+        <div class="space-x-1">
+          <button onclick="toggleAllFilters(true)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Seleccionar todo</button>
+          <button onclick="toggleAllFilters(false)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Deseleccionar todo</button>
+        </div>
+      </div>
+
+      <div class="mb-3 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
+        <span>👉</span> <span><strong>Paso 2:</strong> Ajusta los filtros para personalizar tu horario</span>
+      </div>
+
+      <div id="filter-container" class="flex-1 overflow-y-auto space-y-4 pr-1 text-sm">
+        <p class="text-gray-400 text-center py-10">Carga un archivo <code>.ics</code> arriba para generar los filtros de las asignaturas.</p>
+      </div>
+
+      <button id="apply-btn" onclick="applyFilters()" disabled class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold py-2 rounded-lg transition">
+        Aplicar Filtros
+      </button>
+    </section>
+
+    <!-- Columna Derecha: Estadísticas, Calendario y Tabla -->
+    <section class="lg:col-span-2 space-y-6 flex flex-col">
+
+      <!-- Resumen Carga Lectiva -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Resumen de Carga Lectiva (Filtros Activos)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+          <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-indigo-600 font-medium">Horas Totales</p>
+              <p id="stat-total-hours" class="text-2xl font-extrabold text-indigo-900">0 h</p>
+            </div>
+            <span class="text-2xl">⏱️</span>
+          </div>
+
+          <div class="md:col-span-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p class="text-xs text-gray-500 font-medium mb-1.5">Desglose por Tipo de Docencia:</p>
+            <div id="stat-kinds-breakdown" class="flex flex-wrap gap-2">
+              <span class="text-xs text-gray-400">Sin datos de horas.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendario -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div id="calendar" class="min-h-[420px]"></div>
+      </div>
+
+      <!-- Detalle Diario -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex-1">
+        <h3 id="selected-date-title" class="text-md font-semibold text-gray-700 mb-3">Horario del día seleccionado</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-gray-50 border-b text-gray-500 font-medium">
+                <th class="p-2 whitespace-nowrap">Hora (Local)</th>
+                <th class="p-2 min-w-[200px]">Asignatura</th>
+                <th class="p-2 whitespace-nowrap min-w-[130px]">Grupo</th>
+                <th class="p-2 whitespace-nowrap">Tipo de docencia</th>
+                <th class="p-2">Ubicación</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-tbody" class="divide-y divide-gray-100">
+              <tr>
+                <td colspan="5" class="p-4 text-center text-gray-400">Haz clic en un día del calendario para ver el horario detallado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Application Logic -->
+  <script src="js/ics.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

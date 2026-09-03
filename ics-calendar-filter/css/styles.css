@@ -1,0 +1,14 @@
+/* Custom styling for calendar selected day highlighting */
+.fc-daygrid-day.selected-day .fc-daygrid-day-number {
+  background-color: #4f46e5; /* Indigo-600 */
+  color: #ffffff !important;
+  border-radius: 9999px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(79, 70, 229, 0.4);
+  margin: 2px;
+}
