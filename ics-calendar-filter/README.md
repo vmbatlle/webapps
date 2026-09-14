@@ -19,6 +19,6 @@ Herramienta web interactiva para cargar, filtrar y visualizar calendarios acadé
 ## Uso
 
 1. Abre `index.html` en un navegador web.
-2. Haz clic en **Abrir archivo .ICS** para cargar tu calendario.
+2. Haz clic en **Abrir ICS** para cargar tu calendario.
 3. Utiliza el panel lateral para filtrar asignaturas y grupos.
-4. Exporta tu calendario personalizado mediante el botón **Exportar ICS Filtrado**.
+4. Exporta tu calendario personalizado mediante el botón **Guardar ICS**.
