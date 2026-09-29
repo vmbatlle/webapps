@@ -1,17 +1,41 @@
 /**
- * Schedule Search Dialog — queries the local backend proxy (server/app.py) which
- * replicates the SIA/PDS "Consulta Pública de Horarios" flow to fetch an ICS
- * directly, instead of requiring a manual download from the external site.
+ * Schedule Search Dialog — queries a backend proxy (server/app.py locally, or a
+ * deployed Cloudflare Worker in production) which replicates the SIA/PDS
+ * "Consulta Pública de Horarios" flow to fetch an ICS directly, instead of
+ * requiring a manual download from the external site.
  */
+
+const API_BASE_STORAGE_KEY = 'scheduleApiBase';
+
+function getApiBase() {
+  return (localStorage.getItem(API_BASE_STORAGE_KEY) || '').replace(/\/+$/, '');
+}
+
+function setApiBase(value) {
+  localStorage.setItem(API_BASE_STORAGE_KEY, value.trim().replace(/\/+$/, ''));
+}
+
+function apiUrl(path) {
+  const base = getApiBase();
+  // No base configured means same-origin (e.g. local dev server serving both).
+  return base ? `${base}${path}` : path;
+}
 
 let searchConfigLoaded = false;
 
 function openSearchDialog() {
   document.getElementById('search-dialog').showModal();
+  document.getElementById('search-api-base').value = getApiBase();
   showSearchError('');
   if (!searchConfigLoaded) {
     initSearchDialog();
   }
+}
+
+function saveApiBaseAndRetry() {
+  setApiBase(document.getElementById('search-api-base').value);
+  searchConfigLoaded = false;
+  initSearchDialog();
 }
 
 function showSearchError(message) {
@@ -52,7 +76,8 @@ function getCheckedValues(containerEl, dataAttr) {
 
 async function initSearchDialog() {
   try {
-    const configRes = await fetch('/api/config');
+    const configRes = await fetch(apiUrl('/api/config'));
+    if (!configRes.ok) throw new Error('status ' + configRes.status);
     const config = await configRes.json();
     setSelectOptions(document.getElementById('search-anio'), config.anios);
     searchConfigLoaded = true;
@@ -64,7 +89,7 @@ async function initSearchDialog() {
 
     await refreshScheduleOptions();
   } catch (err) {
-    showSearchError('No se pudo conectar con el servidor local. ¿Está en marcha "python3 server/app.py"?');
+    showSearchError('No se pudo conectar con el backend en "' + (getApiBase() || '(mismo origen)') + '". Comprueba la URL del Worker/servidor abajo y guarda de nuevo.');
   }
 }
 
@@ -81,7 +106,7 @@ async function refreshScheduleOptions(opts = {}) {
 
   showSearchError('');
   try {
-    const res = await fetch(`/api/opciones?${params.toString()}`);
+    const res = await fetch(apiUrl(`/api/opciones?${params.toString()}`));
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al consultar las opciones');
 
@@ -111,7 +136,7 @@ async function submitScheduleSearch() {
   label.textContent = 'Cargando...';
 
   try {
-    const res = await fetch('/api/horario', {
+    const res = await fetch(apiUrl('/api/horario'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

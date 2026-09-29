@@ -171,6 +171,15 @@
 
       <div id="search-error" class="hidden mb-3 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg p-3"></div>
 
+      <details class="mb-4 text-sm bg-gray-50 border border-gray-200 rounded-lg p-3">
+        <summary class="cursor-pointer font-semibold text-gray-600">⚙️ URL del backend (Cloudflare Worker)</summary>
+        <div class="mt-2 flex gap-2">
+          <input id="search-api-base" type="text" placeholder="https://tu-worker.tu-subdominio.workers.dev" class="flex-1 border border-gray-300 rounded px-2 py-1.5 text-xs font-mono">
+          <button type="button" onclick="saveApiBaseAndRetry()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium px-3 py-1.5 rounded">Guardar</button>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">Déjalo vacío si sirves este frontend y el backend desde el mismo origen (p. ej. en local).</p>
+      </details>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
         <label class="block">
           <span class="text-xs font-semibold text-gray-600">Curso académico</span>
