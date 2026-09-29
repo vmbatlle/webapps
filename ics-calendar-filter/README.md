@@ -43,8 +43,6 @@ Los cambios en `worker/src/` se aplican automáticamente mientras Wrangler está
 
 ### Opción B: Despliegue en producción (frontend en GitHub Pages + backend en Cloudflare Workers)
 
-### Opción B: Despliegue en producción (frontend en GitHub Pages + backend en Cloudflare Workers)
-
 GitHub Pages solo sirve contenido estático, así que el proxy se despliega por separado como un Cloudflare Worker (capa gratuita). La app elige `https://api.vmbatlle.com` automáticamente cuando no se sirve desde una dirección local.
 1. **Desplegar el Worker:**
    ```bash
