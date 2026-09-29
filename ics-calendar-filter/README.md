@@ -16,32 +16,36 @@ Herramienta web interactiva para cargar, filtrar y visualizar calendarios acadé
 - HTML5 / Vanilla JavaScript (ES6)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [FullCalendar v6](https://fullcalendar.io/)
-- Backend proxy para la búsqueda integrada (dos implementaciones equivalentes, usa la que prefieras):
-  - `server/` — Python 3 (`http.server` + `requests`), pensado para desarrollo local.
-  - `worker/` — Cloudflare Worker (JavaScript), pensado para producción/despliegue gratuito.
+- Backend proxy para la búsqueda integrada en `worker/`, implementado como Cloudflare Worker (JavaScript).
 
-El portal público de horarios de la EINA ([sia.unizar.es](https://sia.unizar.es/pds/consultaPublica/look%5Bconpub%5DInicioPubHora?entradaPublica=true)) no ofrece una API pública: es una aplicación JSP heredada basada en sesión. Ambos backends reproducen la misma secuencia de peticiones que hace el navegador al buscar un horario y pulsar "Descargar" (seleccionar centro/año/plan → `ActualizarCombosPubHora` → `MostrarPubHora` → `mtoGenerarICS`), y devuelven el ICS resultante a la app.
+El portal público de horarios de la EINA ([sia.unizar.es](https://sia.unizar.es/pds/consultaPublica/look%5Bconpub%5DInicioPubHora?entradaPublica=true)) no ofrece una API pública: es una aplicación JSP heredada basada en sesión. El Worker reproduce la secuencia de peticiones que hace el navegador al buscar un horario y pulsar "Descargar" (seleccionar centro/año/plan → `ActualizarCombosPubHora` → `MostrarPubHora` → `mtoGenerarICS`), y devuelve el ICS resultante a la app.
 
-> Nota: al no existir una API pública, ambos backends dependen de la estructura actual del portal `sia.unizar.es`. Si la universidad cambia su web, pueden dejar de funcionar y requerir ajustes en `server/sia_client.py` / `worker/src/sia-client.js`.
+> Nota: al no existir una API pública, el Worker depende de la estructura actual del portal `sia.unizar.es`. Si la universidad cambia su web, puede dejar de funcionar y requerir ajustes en `worker/src/sia-client.js`.
 
 ## Uso
 
-### Opción A: Desarrollo local (frontend + backend Python en el mismo origen)
+### Opción A: Desarrollo y depuración local
 
-1. Instala la dependencia (solo la primera vez):
+Requisitos: Node.js 16 o superior y npm.
+
+1. En una terminal, arranca el Worker con el script incluido:
    ```bash
-   pip install requests
+   cd worker
+   ./dev.sh
    ```
-2. Arranca el servidor desde la carpeta del proyecto:
+2. En otra terminal, sirve el frontend estático desde la raíz del proyecto:
    ```bash
-   python3 server/app.py
+   npx http-server . -p 8000
    ```
-3. Abre [http://localhost:8000](http://localhost:8000) en tu navegador. Dejando vacía la "URL del backend" en el diálogo de búsqueda, la app usa el mismo origen (`/api/...`).
+3. Abre [http://localhost:8000](http://localhost:8000) y pulsa **Buscar horario EINA**. La app prueba primero `https://api.vmbatlle.com` y, si no responde, usa automáticamente `http://localhost:8787`.
+
+Los cambios en `worker/src/` se aplican automáticamente mientras Wrangler está ejecutándose. Para depurar el Worker, usa la terminal donde se ejecuta Wrangler y las herramientas de desarrollo del navegador para revisar las peticiones a `http://localhost:8787/api/...`.
+
+### Opción B: Despliegue en producción (frontend en GitHub Pages + backend en Cloudflare Workers)
 
 ### Opción B: Despliegue en producción (frontend en GitHub Pages + backend en Cloudflare Workers)
 
 GitHub Pages solo sirve contenido estático, así que el proxy se despliega por separado como un Cloudflare Worker (capa gratuita).
-
 1. **Desplegar el Worker:**
    ```bash
    cd worker
@@ -49,10 +53,10 @@ GitHub Pages solo sirve contenido estático, así que el proxy se despliega por 
    npx wrangler login      # solo la primera vez, abre el navegador para autenticarte
    npx wrangler deploy --config wrangler.toml
    ```
-   Al terminar, `wrangler` imprime la URL pública. `wrangler.toml` ya incluye un Custom Domain (`horario-api.vmbatlle.com`) apuntando al Worker, ya que `vmbatlle.com` está en la misma cuenta de Cloudflare; `wrangler deploy` crea el registro DNS y el certificado TLS automáticamente. Cambia el `pattern` en `wrangler.toml` si prefieras otro subdominio, o elimina el bloque `[[routes]]` para usar solo la URL `*.workers.dev`.
-2. **Publicar el frontend en GitHub Pages:** activa GitHub Pages para este repositorio (Settings → Pages → Deploy from branch), sirviendo la raíz del proyecto (`index.html`, `css/`, `js/`). El worker no necesita subirse a Pages.
-3. **Configurar la app:** abre tu sitio de GitHub Pages, haz clic en **Buscar horario EINA**, despliega "⚙️ URL del backend", pega `https://horario-api.vmbatlle.com` (o la URL `*.workers.dev` del paso 1) y pulsa **Guardar**. Queda guardada en `localStorage` del navegador, no hace falta tocar el código.
-4. A partir de ahí, busca y carga tu horario igual que en local.
+   Al terminar, `wrangler` imprime la URL pública. `wrangler.toml` ya incluye un Custom Domain (`api.vmbatlle.com`) apuntando al Worker, ya que `vmbatlle.com` está en la misma cuenta de Cloudflare; `wrangler deploy` crea el registro DNS y el certificado TLS automáticamente. Cambia el `pattern` en `wrangler.toml` si prefieres otro subdominio, o elimina el bloque `[[routes]]` para usar solo la URL `*.workers.dev`.
+   2. **Publicar el frontend en GitHub Pages:** activa GitHub Pages para este repositorio (Settings → Pages → Deploy from branch), sirviendo la raíz del proyecto (`index.html`, `css/`, `js/`). El worker no necesita subirse a Pages.
+   3. **Usar la app:** abre tu sitio de GitHub Pages y haz clic en **Buscar horario EINA**. La app conecta automáticamente con `https://api.vmbatlle.com`.
+   4. A partir de ahí, busca y carga tu horario igual que en local.
 
 ### Opción C: Carga manual de un ICS (sin backend)
 

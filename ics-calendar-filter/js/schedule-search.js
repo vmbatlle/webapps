@@ -1,18 +1,14 @@
 /**
- * Schedule Search Dialog — queries a backend proxy (server/app.py locally, or a
- * deployed Cloudflare Worker in production) which replicates the SIA/PDS
+ * Schedule Search Dialog — queries a Cloudflare Worker backend which replicates the SIA/PDS
  * "Consulta Pública de Horarios" flow to fetch an ICS directly, instead of
  * requiring a manual download from the external site.
  */
 
-const API_BASE_STORAGE_KEY = 'scheduleApiBase';
+const API_BASES = ['https://api.vmbatlle.com', 'http://localhost:8787'];
+let activeApiBase = '';
 
 function getApiBase() {
-  return (localStorage.getItem(API_BASE_STORAGE_KEY) || '').replace(/\/+$/, '');
-}
-
-function setApiBase(value) {
-  localStorage.setItem(API_BASE_STORAGE_KEY, value.trim().replace(/\/+$/, ''));
+  return activeApiBase;
 }
 
 function apiUrl(path) {
@@ -25,17 +21,10 @@ let searchConfigLoaded = false;
 
 function openSearchDialog() {
   document.getElementById('search-dialog').showModal();
-  document.getElementById('search-api-base').value = getApiBase();
   showSearchError('');
   if (!searchConfigLoaded) {
     initSearchDialog();
   }
-}
-
-function saveApiBaseAndRetry() {
-  setApiBase(document.getElementById('search-api-base').value);
-  searchConfigLoaded = false;
-  initSearchDialog();
 }
 
 function showSearchError(message) {
@@ -75,22 +64,28 @@ function getCheckedValues(containerEl, dataAttr) {
 }
 
 async function initSearchDialog() {
-  try {
-    const configRes = await fetch(apiUrl('/api/config'));
-    if (!configRes.ok) throw new Error('status ' + configRes.status);
-    const config = await configRes.json();
-    setSelectOptions(document.getElementById('search-anio'), config.anios);
-    searchConfigLoaded = true;
+  for (const base of API_BASES) {
+    try {
+      const configRes = await fetch(`${base}/api/config`);
+      if (!configRes.ok) throw new Error('status ' + configRes.status);
+      const config = await configRes.json();
+      activeApiBase = base;
+      setSelectOptions(document.getElementById('search-anio'), config.anios);
+      searchConfigLoaded = true;
 
-    document.getElementById('search-anio').onchange = () => refreshScheduleOptions();
-    document.getElementById('search-plan').onchange = () => refreshScheduleOptions({ keepPlan: true });
-    document.getElementById('search-curso').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true });
-    document.getElementById('search-trimestre').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true, keepTrimestre: true });
+      document.getElementById('search-anio').onchange = () => refreshScheduleOptions();
+      document.getElementById('search-plan').onchange = () => refreshScheduleOptions({ keepPlan: true });
+      document.getElementById('search-curso').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true });
+      document.getElementById('search-trimestre').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true, keepTrimestre: true });
 
-    await refreshScheduleOptions();
-  } catch (err) {
-    showSearchError('No se pudo conectar con el backend en "' + (getApiBase() || '(mismo origen)') + '". Comprueba la URL del Worker/servidor abajo y guarda de nuevo.');
+      await refreshScheduleOptions();
+      return;
+    } catch (err) {
+      activeApiBase = '';
+    }
   }
+
+  showSearchError('No se pudo conectar con el backend. Comprueba que el servicio está disponible e inténtalo de nuevo.');
 }
 
 async function refreshScheduleOptions(opts = {}) {

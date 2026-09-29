@@ -1,4 +1,24 @@
 /* Custom styling for calendar selected day highlighting */
+.top-bar-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-width: 1px;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+.top-bar-button:focus-visible {
+  outline: 2px solid #c7d2fe;
+  outline-offset: 2px;
+}
+
 .fc-daygrid-day.selected-day .fc-daygrid-day-number {
   background-color: #4f46e5; /* Indigo-600 */
   color: #ffffff !important;
