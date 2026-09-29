@@ -60,7 +60,8 @@ function getCheckedValues(containerEl, dataAttr) {
 
 async function initSearchDialog() {
   try {
-    const configRes = await fetch(apiUrl('/api/config'));
+    const currentYear = new Date().getFullYear();
+    const configRes = await fetch(apiUrl(`/api/config?year=${currentYear}`));
     if (!configRes.ok) throw new Error('status ' + configRes.status);
     const config = await configRes.json();
     setSelectOptions(document.getElementById('search-anio'), config.anios);

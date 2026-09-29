@@ -20,8 +20,7 @@ const CTRL = "https://sia.unizar.es/pds/control/";
 export const CENTROS = [{ value: "110", label: "110 - Escuela de Ingeniería y Arquitectura" }];
 
 // Last 4 academic years up to the current one, most recent last.
-function buildAnios() {
-  const currentYear = new Date().getFullYear();
+export function buildAnios(currentYear) {
   const years = [];
   for (let y = currentYear - 3; y <= currentYear; y++) years.push(y);
   return years.map((y, i, arr) => ({
@@ -30,8 +29,6 @@ function buildAnios() {
     selected: i === arr.length - 1,
   }));
 }
-
-export const ANIOS = buildAnios();
 
 export class SiaError extends Error {}
 

@@ -1,4 +1,4 @@
-import { CENTROS, ANIOS, fetchOptions, fetchIcs, SiaError } from "./sia-client.js";
+import { CENTROS, buildAnios, fetchOptions, fetchIcs, SiaError } from "./sia-client.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +23,11 @@ export default {
 
     try {
       if (request.method === "GET" && url.pathname === "/api/config") {
-        return json(200, { centros: CENTROS, anios: ANIOS });
+        const requestedYear = Number(url.searchParams.get("year"));
+        const currentYear = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100
+          ? requestedYear
+          : new Date().getFullYear();
+        return json(200, { centros: CENTROS, anios: buildAnios(currentYear) });
       }
 
       if (request.method === "GET" && url.pathname === "/api/opciones") {
