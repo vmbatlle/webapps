@@ -18,7 +18,20 @@ const BASE = "https://sia.unizar.es/pds/consultaPublica/";
 const CTRL = "https://sia.unizar.es/pds/control/";
 
 export const CENTROS = [{ value: "110", label: "110 - Escuela de Ingeniería y Arquitectura" }];
-export const ANIOS = [2023, 2024, 2025, 2026].map((y) => ({ value: String(y), label: `${y}/${y + 1}` }));
+
+// Last 4 academic years up to the current one, most recent last.
+function buildAnios() {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let y = currentYear - 3; y <= currentYear; y++) years.push(y);
+  return years.map((y, i, arr) => ({
+    value: String(y),
+    label: `${y}/${y + 1}`,
+    selected: i === arr.length - 1,
+  }));
+}
+
+export const ANIOS = buildAnios();
 
 export class SiaError extends Error {}
 

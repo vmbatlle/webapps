@@ -37,7 +37,7 @@ Requisitos: Node.js 16 o superior y npm.
    ```bash
    npx http-server . -p 8000
    ```
-3. Abre [http://localhost:8000](http://localhost:8000) y pulsa **Buscar horario EINA**. La app prueba primero `https://api.vmbatlle.com` y, si no responde, usa automáticamente `http://localhost:8787`.
+3. Abre [http://localhost:8000](http://localhost:8000) y pulsa **Buscar horario EINA**. La app usa `http://localhost:8787` cuando se abre desde `localhost` y `https://api.vmbatlle.com` en el sitio desplegado.
 
 Los cambios en `worker/src/` se aplican automáticamente mientras Wrangler está ejecutándose. Para depurar el Worker, usa la terminal donde se ejecuta Wrangler y las herramientas de desarrollo del navegador para revisar las peticiones a `http://localhost:8787/api/...`.
 
@@ -45,7 +45,7 @@ Los cambios en `worker/src/` se aplican automáticamente mientras Wrangler está
 
 ### Opción B: Despliegue en producción (frontend en GitHub Pages + backend en Cloudflare Workers)
 
-GitHub Pages solo sirve contenido estático, así que el proxy se despliega por separado como un Cloudflare Worker (capa gratuita).
+GitHub Pages solo sirve contenido estático, así que el proxy se despliega por separado como un Cloudflare Worker (capa gratuita). La app elige `https://api.vmbatlle.com` automáticamente cuando no se sirve desde una dirección local.
 1. **Desplegar el Worker:**
    ```bash
    cd worker

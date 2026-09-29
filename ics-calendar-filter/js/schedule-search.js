@@ -4,17 +4,12 @@
  * requiring a manual download from the external site.
  */
 
-const API_BASES = ['https://api.vmbatlle.com', 'http://localhost:8787'];
-let activeApiBase = '';
-
-function getApiBase() {
-  return activeApiBase;
-}
+const API_BASE = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+  ? 'http://localhost:8787'
+  : 'https://api.vmbatlle.com';
 
 function apiUrl(path) {
-  const base = getApiBase();
-  // No base configured means same-origin (e.g. local dev server serving both).
-  return base ? `${base}${path}` : path;
+  return `${API_BASE}${path}`;
 }
 
 let searchConfigLoaded = false;
@@ -64,28 +59,22 @@ function getCheckedValues(containerEl, dataAttr) {
 }
 
 async function initSearchDialog() {
-  for (const base of API_BASES) {
-    try {
-      const configRes = await fetch(`${base}/api/config`);
-      if (!configRes.ok) throw new Error('status ' + configRes.status);
-      const config = await configRes.json();
-      activeApiBase = base;
-      setSelectOptions(document.getElementById('search-anio'), config.anios);
-      searchConfigLoaded = true;
+  try {
+    const configRes = await fetch(apiUrl('/api/config'));
+    if (!configRes.ok) throw new Error('status ' + configRes.status);
+    const config = await configRes.json();
+    setSelectOptions(document.getElementById('search-anio'), config.anios);
+    searchConfigLoaded = true;
 
-      document.getElementById('search-anio').onchange = () => refreshScheduleOptions();
-      document.getElementById('search-plan').onchange = () => refreshScheduleOptions({ keepPlan: true });
-      document.getElementById('search-curso').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true });
-      document.getElementById('search-trimestre').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true, keepTrimestre: true });
+    document.getElementById('search-anio').onchange = () => refreshScheduleOptions();
+    document.getElementById('search-plan').onchange = () => refreshScheduleOptions({ keepPlan: true });
+    document.getElementById('search-curso').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true });
+    document.getElementById('search-trimestre').onchange = () => refreshScheduleOptions({ keepPlan: true, keepCurso: true, keepTrimestre: true });
 
-      await refreshScheduleOptions();
-      return;
-    } catch (err) {
-      activeApiBase = '';
-    }
+    await refreshScheduleOptions();
+  } catch (err) {
+    showSearchError('No se pudo conectar con el backend. Comprueba que el servicio está disponible e inténtalo de nuevo.');
   }
-
-  showSearchError('No se pudo conectar con el backend. Comprueba que el servicio está disponible e inténtalo de nuevo.');
 }
 
 async function refreshScheduleOptions(opts = {}) {
