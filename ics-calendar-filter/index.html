@@ -24,6 +24,9 @@
         <span aria-hidden="true">❔</span> Ayuda
       </button>
       <input type="file" id="ics-file-input" accept=".ics" class="hidden" onchange="handleFileSelect(event)">
+      <button onclick="openSearchDialog()" class="bg-indigo-800/60 hover:bg-indigo-800 text-indigo-100 font-medium px-4 py-2 rounded-lg border border-indigo-500/40 transition flex items-center gap-2">
+        <span>🔎</span> Buscar horario EINA
+      </button>
       <button onclick="document.getElementById('ics-file-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
         <span>📁</span> Abrir ICS
       </button>
@@ -125,19 +128,20 @@
         <li class="flex gap-3">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">1</span>
           <div>
-            <strong>Descargar ICS desde Horarios EINA:</strong>
+            <strong>Busca y carga tu horario directamente (requiere ejecutar el servidor local, ver README):</strong>
             <br>
-            <a href="https://sia.unizar.es/pds/consultaPublica/look[conpub]InicioPubHora?entradaPublica=true" 
-               target="_blank" rel="noopener noreferrer" 
-               class="mt-2 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm border border-indigo-400/40">
-               <span aria-hidden="true">🗓️</span> Abrir horarios
-            </a>
+            <button type="button" onclick="document.getElementById('help-dialog').close(); openSearchDialog()" class="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
+               <span aria-hidden="true">🔎</span> Buscar horario EINA
+            </button>
           </div>
         </li>
         <li class="flex gap-3">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">2</span>
           <div>
-            <strong>Abre el ICS descargado a través de:</strong>
+            <strong>Alternativa manual — abre un ICS ya descargado desde</strong>
+            <a href="https://sia.unizar.es/pds/consultaPublica/look[conpub]InicioPubHora?entradaPublica=true"
+               target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline">Horarios EINA</a>:
+            <br>
             <button type="button" onclick="document.getElementById('help-dialog').close(); document.getElementById('ics-file-input').click()" class="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
               <span aria-hidden="true">📁</span> Abrir ICS
             </button>
@@ -155,8 +159,66 @@
     </div>
   </dialog>
 
+  <dialog id="search-dialog" aria-labelledby="search-dialog-title" class="w-[calc(100%-2rem)] max-w-2xl rounded-xl p-0 shadow-xl backdrop:bg-gray-900/50">
+    <div class="bg-white p-6 text-gray-800">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-indigo-600">Consulta Pública de Horarios · EINA</p>
+          <h2 id="search-dialog-title" class="text-xl font-bold text-gray-900">Buscar y cargar horario</h2>
+        </div>
+        <button type="button" onclick="document.getElementById('search-dialog').close()" class="text-gray-500 hover:text-gray-800 text-xl leading-none" aria-label="Cerrar búsqueda">&times;</button>
+      </div>
+
+      <div id="search-error" class="hidden mb-3 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg p-3"></div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <label class="block">
+          <span class="text-xs font-semibold text-gray-600">Curso académico</span>
+          <select id="search-anio" class="mt-1 w-full border border-gray-300 rounded px-2 py-1.5"></select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-semibold text-gray-600">Plan de estudio</span>
+          <select id="search-plan" class="mt-1 w-full border border-gray-300 rounded px-2 py-1.5"></select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-semibold text-gray-600">Curso</span>
+          <select id="search-curso" class="mt-1 w-full border border-gray-300 rounded px-2 py-1.5"></select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-semibold text-gray-600">Periodo académico</span>
+          <select id="search-trimestre" class="mt-1 w-full border border-gray-300 rounded px-2 py-1.5"></select>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-semibold text-gray-600">Asignaturas</span>
+            <span class="text-[11px] text-gray-400">Selecciona una o varias</span>
+          </div>
+          <div id="search-asignaturas" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-semibold text-gray-600">Grupos</span>
+            <span class="text-[11px] text-gray-400">Selecciona uno o varios</span>
+          </div>
+          <div id="search-grupos" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button type="button" onclick="document.getElementById('search-dialog').close()" class="px-4 py-2 rounded text-gray-600 hover:bg-gray-100">Cancelar</button>
+        <button type="button" id="search-submit-btn" onclick="submitScheduleSearch()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2">
+          <span>📥</span> <span id="search-submit-label">Cargar horario</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Application Logic -->
   <script src="js/ics.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/schedule-search.js"></script>
 </body>
 </html>
