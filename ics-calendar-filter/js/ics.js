@@ -73,10 +73,14 @@ function parseEventBlock(rawLines) {
     meta = { valid: true, code, name, courseKey, group, kind };
 
     if (!courseMetaData[courseKey]) {
-      courseMetaData[courseKey] = { groups: new Set(), kinds: new Set() };
+      courseMetaData[courseKey] = { groups: new Set(), kinds: new Set(), kindGroups: new Map(), removed: false };
     }
     courseMetaData[courseKey].groups.add(group);
     courseMetaData[courseKey].kinds.add(kind);
+    if (!courseMetaData[courseKey].kindGroups.has(kind)) {
+      courseMetaData[courseKey].kindGroups.set(kind, new Set());
+    }
+    courseMetaData[courseKey].kindGroups.get(kind).add(group);
   }
 
   return {
@@ -103,6 +107,7 @@ function parseICSContent(icsText) {
     parsedFooter = [];
     allEvents = [];
     courseMetaData = {};
+    expandedCourseKey = null;
 
     let inEvent = false;
     let currentLines = [];

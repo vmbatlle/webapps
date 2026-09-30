@@ -15,6 +15,7 @@ let filteredEvents = [];
 let courseMetaData = {}; 
 let calendar = null;
 let selectedDateStr = new Date().toISOString().split('T')[0];
+let expandedCourseKey = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const calendarEl = document.getElementById('calendar');
@@ -97,112 +98,223 @@ function handleFileSelect(event) {
   reader.readAsText(file);
 }
 
+function pairKey(kind, group) {
+  return `${kind}\u0000${group}`;
+}
+
 function buildFilterUI() {
   const container = document.getElementById('filter-container');
   container.innerHTML = '';
 
-  const sortedCourses = Object.keys(courseMetaData).sort();
+  const active = Object.keys(courseMetaData).filter(k => !courseMetaData[k].removed).sort();
+  const removed = Object.keys(courseMetaData).filter(k => courseMetaData[k].removed).sort();
 
-  sortedCourses.forEach((ckey) => {
-    const course = courseMetaData[ckey];
-    const card = document.createElement('div');
-    card.className = "p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2";
-
-    const titleRow = document.createElement('div');
-    titleRow.className = "flex items-center justify-between border-b pb-1.5 gap-2";
-
-    const titleLeft = document.createElement('div');
-    titleLeft.className = "flex items-center gap-2 overflow-hidden";
-
-    const colorDot = document.createElement('span');
-    colorDot.className = "w-3 h-3 rounded-full flex-shrink-0 inline-block";
-    colorDot.style.backgroundColor = course.color;
-
-    const titleText = document.createElement('h3');
-    titleText.className = "font-bold text-gray-800 text-xs uppercase tracking-wide truncate";
-    titleText.innerText = ckey;
-
-    titleLeft.appendChild(colorDot);
-    titleLeft.appendChild(titleText);
-
-    const badge = document.createElement('span');
-    badge.id = `badge-${sanitizeId(ckey)}`;
-    badge.className = "text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 flex-shrink-0 whitespace-nowrap";
-    badge.innerText = "0 (0h)";
-
-    titleRow.appendChild(titleLeft);
-    titleRow.appendChild(badge);
-    card.appendChild(titleRow);
-
-    const grpLabel = document.createElement('div');
-    grpLabel.className = "text-xs font-semibold text-gray-600 mt-1";
-    grpLabel.innerText = "Grupos:";
-    card.appendChild(grpLabel);
-
-    const grpContainer = document.createElement('div');
-    grpContainer.className = "flex flex-wrap gap-1.5";
-
-    Array.from(course.groups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).forEach(grp => {
-      const badgeLabel = document.createElement('label');
-      badgeLabel.className = "flex items-center gap-1 text-xs bg-white border px-2 py-1 rounded cursor-pointer hover:bg-indigo-50";
-      badgeLabel.innerHTML = `<input type="checkbox" data-course="${ckey}" data-type="groups" data-val="${grp}" checked class="rounded text-indigo-600"> Gr. ${grp}`;
-      grpContainer.appendChild(badgeLabel);
-    });
-    card.appendChild(grpContainer);
-
-    const kindLabel = document.createElement('div');
-    kindLabel.className = "text-xs font-semibold text-gray-600 mt-1";
-    kindLabel.innerText = "Tipo de docencia:";
-    card.appendChild(kindLabel);
-
-    const kindContainer = document.createElement('div');
-    kindContainer.className = "flex flex-col gap-1";
-
-    Array.from(course.kinds).sort().forEach(kind => {
-      const row = document.createElement('label');
-      row.className = "flex items-center justify-between text-xs cursor-pointer hover:bg-gray-100 p-1 rounded transition gap-2";
-      
-      const leftDiv = document.createElement('div');
-      leftDiv.className = "flex items-center gap-2 overflow-hidden";
-      leftDiv.innerHTML = `<input type="checkbox" data-course="${ckey}" data-type="kinds" data-val="${kind}" checked class="rounded text-indigo-600"> <span class="truncate">${kind}</span>`;
-
-      const kindBadge = document.createElement('span');
-      kindBadge.id = `kind-badge-${sanitizeId(ckey)}-${sanitizeId(kind)}`;
-      kindBadge.className = "text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 flex-shrink-0 whitespace-nowrap";
-      kindBadge.innerText = "0 (0h)";
-
-      row.appendChild(leftDiv);
-      row.appendChild(kindBadge);
-      kindContainer.appendChild(row);
-    });
-    card.appendChild(kindContainer);
-
-    container.appendChild(card);
+  active.concat(removed).forEach((ckey) => {
+    container.appendChild(buildCourseRow(ckey));
   });
 }
 
+function buildCourseRow(ckey) {
+  const course = courseMetaData[ckey];
+  const isRemoved = !!course.removed;
+  const isExpanded = !isRemoved && expandedCourseKey === ckey;
+
+  const item = document.createElement('div');
+  item.className = "course-item bg-gray-50 border border-gray-200 rounded-lg overflow-hidden transition-opacity" + (isRemoved ? " opacity-50" : "");
+  item.dataset.course = ckey;
+
+  const header = document.createElement('div');
+  header.className = "flex items-center justify-between gap-2 p-2.5" + (isRemoved ? "" : " cursor-pointer hover:bg-gray-100");
+  if (!isRemoved) {
+    header.addEventListener('click', () => toggleCourseExpand(ckey));
+  }
+
+  const titleLeft = document.createElement('div');
+  titleLeft.className = "flex items-center gap-2 overflow-hidden";
+
+  if (!isRemoved) {
+    const chevron = document.createElement('span');
+    chevron.className = "course-chevron text-gray-400 text-xs flex-shrink-0 transition-transform" + (isExpanded ? " rotate-90" : "");
+    chevron.innerText = "▶";
+    titleLeft.appendChild(chevron);
+  }
+
+  const colorDot = document.createElement('span');
+  colorDot.className = "w-3 h-3 rounded-full flex-shrink-0 inline-block";
+  colorDot.style.backgroundColor = course.color;
+
+  const titleText = document.createElement('h3');
+  titleText.className = "font-bold text-gray-800 text-xs uppercase tracking-wide truncate";
+  titleText.innerText = ckey;
+
+  titleLeft.appendChild(colorDot);
+  titleLeft.appendChild(titleText);
+
+  const titleRight = document.createElement('div');
+  titleRight.className = "flex items-center gap-2 flex-shrink-0";
+
+  const badge = document.createElement('span');
+  badge.id = `badge-${sanitizeId(ckey)}`;
+  badge.className = "text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 whitespace-nowrap";
+  badge.innerText = "0 (0h)";
+  titleRight.appendChild(badge);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = "button";
+  removeBtn.title = isRemoved ? "Volver a añadir la asignatura" : "Quitar la asignatura";
+  removeBtn.className = "w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold transition " +
+    (isRemoved ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-red-100 text-red-700 hover:bg-red-200");
+  removeBtn.innerText = isRemoved ? "+" : "×";
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCourseRemoved(ckey);
+  });
+  titleRight.appendChild(removeBtn);
+
+  header.appendChild(titleLeft);
+  header.appendChild(titleRight);
+  item.appendChild(header);
+
+  if (!isRemoved) {
+    const body = document.createElement('div');
+    body.className = "course-body p-2.5 pt-0 space-y-1.5 border-t border-gray-200" + (isExpanded ? "" : " hidden");
+
+    const kindLabel = document.createElement('div');
+    kindLabel.className = "text-xs font-semibold text-gray-600 mt-2";
+    kindLabel.innerText = "Tipo de docencia y grupos:";
+    body.appendChild(kindLabel);
+
+    Array.from(course.kindGroups.keys()).sort().forEach(kind => {
+      body.appendChild(buildKindGroupNode(ckey, kind));
+    });
+
+    item.appendChild(body);
+  }
+
+  return item;
+}
+
+function buildKindGroupNode(ckey, kind) {
+  const groups = Array.from(courseMetaData[ckey].kindGroups.get(kind))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+  const wrapper = document.createElement('div');
+  wrapper.className = "bg-white border border-gray-200 rounded";
+
+  const parentRow = document.createElement('label');
+  parentRow.className = "flex items-center justify-between text-xs cursor-pointer hover:bg-gray-100 p-1.5 rounded gap-2";
+
+  const parentLeft = document.createElement('div');
+  parentLeft.className = "flex items-center gap-2 overflow-hidden";
+
+  const parentCb = document.createElement('input');
+  parentCb.type = "checkbox";
+  parentCb.checked = true;
+  parentCb.className = "rounded text-indigo-600 kind-checkbox";
+
+  const parentSpan = document.createElement('span');
+  parentSpan.className = "truncate font-medium";
+  parentSpan.innerText = kind;
+
+  parentLeft.appendChild(parentCb);
+  parentLeft.appendChild(parentSpan);
+
+  const kindBadge = document.createElement('span');
+  kindBadge.id = `kind-badge-${sanitizeId(ckey)}-${sanitizeId(kind)}`;
+  kindBadge.className = "text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 flex-shrink-0 whitespace-nowrap";
+  kindBadge.innerText = "0 (0h)";
+
+  parentRow.appendChild(parentLeft);
+  parentRow.appendChild(kindBadge);
+  wrapper.appendChild(parentRow);
+
+  const childContainer = document.createElement('div');
+  childContainer.className = "flex flex-wrap gap-1.5 px-1.5 pb-1.5";
+
+  const leafCheckboxes = [];
+  groups.forEach(grp => {
+    const grpLabel = document.createElement('label');
+    grpLabel.className = "flex items-center gap-1 text-xs bg-gray-50 border px-2 py-1 rounded cursor-pointer hover:bg-indigo-50";
+
+    const leafCb = document.createElement('input');
+    leafCb.type = "checkbox";
+    leafCb.checked = true;
+    leafCb.className = "rounded text-indigo-600 leaf-checkbox";
+    leafCb.dataset.course = ckey;
+    leafCb.dataset.kind = kind;
+    leafCb.dataset.group = grp;
+
+    grpLabel.appendChild(leafCb);
+    grpLabel.appendChild(document.createTextNode(` Gr. ${grp}`));
+    childContainer.appendChild(grpLabel);
+    leafCheckboxes.push(leafCb);
+
+    leafCb.addEventListener('change', () => updateKindCheckboxState(parentCb, leafCheckboxes));
+  });
+
+  parentCb.addEventListener('change', () => {
+    leafCheckboxes.forEach(cb => cb.checked = parentCb.checked);
+    parentCb.indeterminate = false;
+  });
+
+  wrapper.appendChild(childContainer);
+  return wrapper;
+}
+
+function updateKindCheckboxState(parentCb, leafCheckboxes) {
+  const checkedCount = leafCheckboxes.filter(cb => cb.checked).length;
+  parentCb.checked = checkedCount === leafCheckboxes.length;
+  parentCb.indeterminate = checkedCount > 0 && checkedCount < leafCheckboxes.length;
+}
+
+function toggleCourseExpand(ckey) {
+  expandedCourseKey = expandedCourseKey === ckey ? null : ckey;
+  document.querySelectorAll('.course-item').forEach(item => {
+    const body = item.querySelector('.course-body');
+    const chevron = item.querySelector('.course-chevron');
+    if (!body) return;
+    const isExpanded = item.dataset.course === expandedCourseKey;
+    body.classList.toggle('hidden', !isExpanded);
+    if (chevron) chevron.classList.toggle('rotate-90', isExpanded);
+  });
+}
+
+function toggleCourseRemoved(ckey) {
+  const course = courseMetaData[ckey];
+  course.removed = !course.removed;
+  if (course.removed && expandedCourseKey === ckey) {
+    expandedCourseKey = null;
+  }
+  buildFilterUI();
+  applyFilters();
+}
+
 function toggleAllFilters(state) {
-  document.querySelectorAll('#filter-container input[type="checkbox"]').forEach(cb => cb.checked = state);
+  document.querySelectorAll('#filter-container input.leaf-checkbox').forEach(cb => cb.checked = state);
+  document.querySelectorAll('#filter-container input.kind-checkbox').forEach(cb => {
+    cb.checked = state;
+    cb.indeterminate = false;
+  });
   applyFilters();
 }
 
 function applyFilters() {
   const activeFilters = {};
 
-  document.querySelectorAll('#filter-container input[type="checkbox"]').forEach(cb => {
+  document.querySelectorAll('#filter-container input.leaf-checkbox').forEach(cb => {
     const ckey = cb.dataset.course;
-    const type = cb.dataset.type;
-    const val = cb.dataset.val;
+    if (courseMetaData[ckey]?.removed) return;
 
-    if (!activeFilters[ckey]) activeFilters[ckey] = { groups: new Set(), kinds: new Set() };
-    if (cb.checked) activeFilters[ckey][type].add(val);
+    if (!activeFilters[ckey]) activeFilters[ckey] = new Set();
+    if (cb.checked) activeFilters[ckey].add(pairKey(cb.dataset.kind, cb.dataset.group));
   });
 
   filteredEvents = allEvents.filter(ev => {
     if (!ev.meta.valid) return false;
+    if (courseMetaData[ev.meta.courseKey]?.removed) return false;
     const courseFilter = activeFilters[ev.meta.courseKey];
     if (!courseFilter) return false;
-    return courseFilter.groups.has(ev.meta.group) && courseFilter.kinds.has(ev.meta.kind);
+    return courseFilter.has(pairKey(ev.meta.kind, ev.meta.group));
   });
 
   const courseStats = {};
