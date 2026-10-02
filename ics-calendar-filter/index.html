@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Filtro de Calendario Académico ICS</title>
+  <title>Calendario Académico</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -18,20 +18,20 @@
 
   <!-- Encabezado / Navegación -->
   <header class="bg-indigo-700 text-white p-4 shadow-md flex flex-wrap justify-between items-center gap-4">
-    <h1 class="text-xl font-bold tracking-wide">Filtro de Calendario Académico ICS</h1>
+    <h1 class="text-xl font-bold tracking-wide">Calendario Académico</h1>
     <div class="flex items-center gap-3">
       <button type="button" onclick="document.getElementById('help-dialog').showModal()" class="top-bar-button bg-indigo-800/60 hover:bg-indigo-800 text-indigo-100 border-indigo-500/40" aria-haspopup="dialog">
         <span aria-hidden="true">❔</span> Ayuda
       </button>
       <input type="file" id="ics-file-input" accept=".ics" class="hidden" onchange="handleFileSelect(event)">
       <button onclick="openSearchDialog()" class="top-bar-button bg-indigo-800/60 hover:bg-indigo-800 text-indigo-100 border-indigo-500/40">
-        <span>🔎</span> Buscar horario EINA
+        <span>🔎</span> Añadir
       </button>
       <button onclick="document.getElementById('ics-file-input').click()" class="top-bar-button bg-indigo-800/60 hover:bg-indigo-800 text-indigo-100 border-indigo-500/40">
-        <span>📁</span> Abrir ICS
+        <span>📁</span> Importar
       </button>
       <button id="export-btn" onclick="exportFilteredICS()" disabled class="top-bar-button bg-indigo-800/60 hover:bg-indigo-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-indigo-100 disabled:text-white border-indigo-500/40">
-        <span>💾</span> Guardar ICS
+        <span>💾</span> Guardar
       </button>
     </div>
   </header>
@@ -42,7 +42,7 @@
     <!-- Columna Izquierda: Filtros -->
     <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-2">
-        <h2 class="text-lg font-semibold text-gray-700">Filtros de Asignaturas</h2>
+        <h2 class="text-lg font-semibold text-gray-700">Asignaturas</h2>
         <div class="space-x-1">
           <button onclick="toggleAllFilters(true)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Seleccionar todo</button>
           <button onclick="toggleAllFilters(false)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Deseleccionar todo</button>
@@ -50,7 +50,7 @@
       </div>
 
       <div id="filter-container" class="flex-1 overflow-y-auto space-y-4 pr-1 text-sm">
-        <p class="text-gray-400 text-center py-10">Abre un archivo <code>.ics</code> para generar los filtros de las asignaturas.</p>
+        <p class="text-gray-400 text-center py-10">Añade o importa asignaturas desde la barra superior.</p>
       </div>
 
       <button id="apply-btn" onclick="applyFilters()" disabled class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold py-2 rounded-lg transition">
@@ -131,11 +131,11 @@
             <strong>Busca o carga tu horario:</strong>
             <br>
             <button type="button" onclick="document.getElementById('help-dialog').close(); openSearchDialog()" class="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
-               <span aria-hidden="true">🔎</span> Buscar horario EINA
+               <span aria-hidden="true">🔎</span> Añadir
             </button>
             <p class="text-xs text-gray-500 mt-2">O también puedes cargar un archivo ICS manualmente (tras descargarlo desde <a href="https://sia.unizar.es/pds/consultaPublica/look[conpub]InicioPubHora?entradaPublica=true" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline">Horarios EINA</a>).</p>
             <button type="button" onclick="document.getElementById('help-dialog').close(); document.getElementById('ics-file-input').click()" class="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2 border border-indigo-400/40">
-              <span aria-hidden="true">📁</span> Abrir ICS
+              <span aria-hidden="true">📁</span> Importar
             </button>
           </div>
         </li>
@@ -176,7 +176,7 @@
         <input id="search-asignatura-query" type="text" autocomplete="off" oninput="onAsignaturaQueryInput()" placeholder="🔎 Buscar nombre o código de la asignatura..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
         <div id="search-asignatura-results" class="hidden mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto text-sm divide-y divide-gray-100"></div>
         <div class="mt-4">
-          <span class="text-xs font-semibold text-gray-600">Asignaturas añadidas</span>
+          <span class="text-xs font-semibold text-gray-600">Asignaturas seleccionadas</span>
           <div id="search-asignatura-selected" class="mt-1 space-y-2"></div>
         </div>
       </div>
@@ -205,7 +205,10 @@
         <div>
           <div class="flex justify-between items-center mb-1">
             <span class="text-xs font-semibold text-gray-600">Asignaturas</span>
-            <span class="text-[11px] text-gray-400">Selecciona una o varias</span>
+            <div class="flex gap-2 text-[11px]">
+              <button type="button" onclick="setPlanSelection('asignatura', true)" class="text-indigo-600 hover:text-indigo-800">Todo</button>
+              <button type="button" onclick="setPlanSelection('asignatura', false)" class="text-indigo-600 hover:text-indigo-800">Nada</button>
+            </div>
           </div>
           <input id="search-asignaturas-filter" type="text" placeholder="🔎 Buscar por nombre o código..." oninput="filterAsignaturas()" class="mb-1.5 w-full border border-gray-300 rounded px-2 py-1 text-xs">
           <div id="search-asignaturas" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
@@ -213,7 +216,10 @@
         <div>
           <div class="flex justify-between items-center mb-1">
             <span class="text-xs font-semibold text-gray-600">Grupos</span>
-            <span class="text-[11px] text-gray-400">Selecciona uno o varios</span>
+            <div class="flex gap-2 text-[11px]">
+              <button type="button" onclick="setPlanSelection('grupo', true)" class="text-indigo-600 hover:text-indigo-800">Todo</button>
+              <button type="button" onclick="setPlanSelection('grupo', false)" class="text-indigo-600 hover:text-indigo-800">Nada</button>
+            </div>
           </div>
           <div id="search-grupos" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
         </div>
@@ -223,7 +229,7 @@
       <div class="flex justify-end gap-2 mt-5">
         <button type="button" onclick="document.getElementById('search-dialog').close()" class="px-4 py-2 rounded text-gray-600 hover:bg-gray-100">Cancelar</button>
         <button type="button" id="search-submit-btn" onclick="submitScheduleSearch()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded transition shadow-sm flex items-center gap-2">
-          <span>📥</span> <span id="search-submit-label">Cargar horario</span>
+          <span id="search-submit-label">+ Añadir</span>
         </button>
       </div>
     </div>

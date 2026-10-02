@@ -1,4 +1,4 @@
-# Filtro de Calendario Académico ICS
+# Calendario Académico
 
 Herramienta web interactiva para cargar, filtrar y visualizar calendarios académicos en formato `.ics`.
 

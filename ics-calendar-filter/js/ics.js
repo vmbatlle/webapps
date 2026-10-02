@@ -98,16 +98,33 @@ function parseEventBlock(rawLines) {
   };
 }
 
+const EVENT_IDENTITY_IGNORED_PROPERTIES = new Set(['CREATED', 'DTSTAMP', 'LAST-MODIFIED', 'SEQUENCE', 'UID']);
+
+function getEventIdentity(event) {
+  const eventDetails = event.rawLines
+    .filter(line => {
+      const separator = line.indexOf(':');
+      if (separator < 0) return false;
+      const propertyName = line.slice(0, separator).split(';')[0].toUpperCase();
+      return !EVENT_IDENTITY_IGNORED_PROPERTIES.has(propertyName);
+    })
+    .sort();
+  return `data:${eventDetails.join('\u0000')}`;
+}
+
 function parseICSContent(icsText) {
   try {
     const unfolded = icsText.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
     const lines = unfolded.split(/\r?\n/);
 
-    parsedHeader = [];
-    parsedFooter = [];
-    allEvents = [];
-    courseMetaData = {};
-    expandedCourseKey = null;
+    const previousSelections = new Map();
+    document.querySelectorAll('#filter-container input.leaf-checkbox').forEach(cb => {
+      previousSelections.set(`${cb.dataset.course}\u0000${pairKey(cb.dataset.kind, cb.dataset.group)}`, cb.checked);
+    });
+    const incomingEvents = [];
+    const incomingHeader = [];
+    const incomingFooter = [];
+    const eventIdentities = new Set(allEvents.map(getEventIdentity));
 
     let inEvent = false;
     let currentLines = [];
@@ -121,22 +138,41 @@ function parseICSContent(icsText) {
         inEvent = false;
         const parsed = parseEventBlock(currentLines);
         if (parsed.meta.valid) {
-          allEvents.push(parsed);
+          const identity = getEventIdentity(parsed);
+          if (!eventIdentities.has(identity)) {
+            incomingEvents.push(parsed);
+            eventIdentities.add(identity);
+          }
         }
       } else if (inEvent) {
         currentLines.push(line);
       } else {
-        if (allEvents.length === 0) parsedHeader.push(line);
-        else parsedFooter.push(line);
+        if (incomingEvents.length === 0) incomingHeader.push(line);
+        else incomingFooter.push(line);
       }
     }
 
-    const sortedCourses = Object.keys(courseMetaData).sort();
-    sortedCourses.forEach((ckey, idx) => {
-      courseMetaData[ckey].color = getCourseColor(idx);
+    if (allEvents.length === 0) {
+      parsedHeader = incomingHeader;
+      parsedFooter = incomingFooter;
+    }
+    allEvents.push(...incomingEvents);
+
+    const sortedCourses = Object.keys(courseMetaData).filter(ckey => !courseMetaData[ckey].color).sort();
+    let nextColorIndex = Object.values(courseMetaData).filter(course => course.color).length;
+    sortedCourses.forEach(ckey => {
+      courseMetaData[ckey].color = getCourseColor(nextColorIndex++);
     });
 
     buildFilterUI();
+    document.querySelectorAll('#filter-container input.leaf-checkbox').forEach(cb => {
+      const key = `${cb.dataset.course}\u0000${pairKey(cb.dataset.kind, cb.dataset.group)}`;
+      if (previousSelections.has(key)) cb.checked = previousSelections.get(key);
+    });
+    document.querySelectorAll('#filter-container input.kind-checkbox').forEach(parentCb => {
+      const leafCheckboxes = Array.from(parentCb.closest('label').nextElementSibling.querySelectorAll('.leaf-checkbox'));
+      updateKindCheckboxState(parentCb, leafCheckboxes);
+    });
     applyFilters();
 
     document.getElementById('export-btn').disabled = false;

@@ -134,8 +134,7 @@ function buildCourseRow(ckey) {
 
   if (!isRemoved) {
     const chevron = document.createElement('span');
-    chevron.className = "course-chevron text-gray-400 text-xs flex-shrink-0 transition-transform" + (isExpanded ? " rotate-90" : "");
-    chevron.innerText = "▶";
+    chevron.className = "course-chevron text-gray-400 flex-shrink-0" + (isExpanded ? " expanded" : "");
     titleLeft.appendChild(chevron);
   }
 
@@ -275,7 +274,7 @@ function toggleCourseExpand(ckey) {
     if (!body) return;
     const isExpanded = item.dataset.course === expandedCourseKey;
     body.classList.toggle('hidden', !isExpanded);
-    if (chevron) chevron.classList.toggle('rotate-90', isExpanded);
+    if (chevron) chevron.classList.toggle('expanded', isExpanded);
   });
 }
 

@@ -69,15 +69,20 @@ function normalizeSearchText(text) {
     .toLowerCase();
 }
 
-function setCheckboxOptions(containerEl, options, namePrefix) {
+function setCheckboxOptions(containerEl, options, namePrefix, checked = false) {
   containerEl.innerHTML = '';
   options.forEach(opt => {
     const label = document.createElement('label');
     label.className = 'flex items-center gap-2 hover:bg-gray-50 rounded px-1 py-0.5 cursor-pointer';
     label.dataset.search = normalizeSearchText(`${opt.value} ${opt.label}`);
-    label.innerHTML = `<input type="checkbox" data-${namePrefix} value="${opt.value}" checked class="rounded text-indigo-600"> <span>${opt.label}</span>`;
+    label.innerHTML = `<input type="checkbox" data-${namePrefix} value="${opt.value}" ${checked ? 'checked' : ''} class="rounded text-indigo-600"> <span>${opt.label}</span>`;
     containerEl.appendChild(label);
   });
+}
+
+function setPlanSelection(dataAttr, checked) {
+  document.querySelectorAll(`#search-${dataAttr === 'asignatura' ? 'asignaturas' : 'grupos'} input[data-${dataAttr}]`)
+    .forEach(checkbox => checkbox.checked = checked);
 }
 
 function filterAsignaturas() {
@@ -331,7 +336,7 @@ async function submitScheduleSearch() {
       showSearchError(err.message);
     } finally {
       btn.disabled = false;
-      label.textContent = 'Cargar horario';
+      label.textContent = '+ Añadir';
     }
     return;
   }
@@ -375,6 +380,6 @@ async function submitScheduleSearch() {
     showSearchError(err.message);
   } finally {
     btn.disabled = false;
-    label.textContent = 'Cargar horario';
+    label.textContent = '+ Añadir';
   }
 }

@@ -1,4 +1,17 @@
 /* Custom styling for calendar selected day highlighting */
+.course-chevron {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+}
+
+.course-chevron.expanded {
+  transform: rotate(45deg);
+}
+
 .top-bar-button {
   display: inline-flex;
   min-height: 2.5rem;
