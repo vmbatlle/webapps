@@ -165,8 +165,23 @@
         <button type="button" onclick="document.getElementById('search-dialog').close()" class="text-gray-500 hover:text-gray-800 text-xl leading-none" aria-label="Cerrar búsqueda">&times;</button>
       </div>
 
+      <div class="inline-flex mb-4 rounded-lg overflow-hidden border border-indigo-600 text-sm font-medium" role="group">
+        <button type="button" id="search-mode-asignatura" onclick="setSearchMode('asignatura')" class="px-4 py-2 bg-indigo-600 text-white">Buscar por asignatura</button>
+        <button type="button" id="search-mode-plan" onclick="setSearchMode('plan')" class="px-4 py-2 bg-white text-indigo-600 border-l border-indigo-600">Buscar por plan</button>
+      </div>
+
       <div id="search-error" class="hidden mb-3 text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg p-3"></div>
 
+      <div id="search-panel-asignatura">
+        <input id="search-asignatura-query" type="text" autocomplete="off" oninput="onAsignaturaQueryInput()" placeholder="🔎 Buscar nombre o código de la asignatura..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+        <div id="search-asignatura-results" class="hidden mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto text-sm divide-y divide-gray-100"></div>
+        <div class="mt-4">
+          <span class="text-xs font-semibold text-gray-600">Asignaturas añadidas</span>
+          <div id="search-asignatura-selected" class="mt-1 space-y-2"></div>
+        </div>
+      </div>
+
+      <div id="search-panel-plan" class="hidden">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
         <label class="block">
           <span class="text-xs font-semibold text-gray-600">Curso académico</span>
@@ -192,6 +207,7 @@
             <span class="text-xs font-semibold text-gray-600">Asignaturas</span>
             <span class="text-[11px] text-gray-400">Selecciona una o varias</span>
           </div>
+          <input id="search-asignaturas-filter" type="text" placeholder="🔎 Buscar por nombre o código..." oninput="filterAsignaturas()" class="mb-1.5 w-full border border-gray-300 rounded px-2 py-1 text-xs">
           <div id="search-asignaturas" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
         </div>
         <div>
@@ -201,6 +217,7 @@
           </div>
           <div id="search-grupos" class="border border-gray-200 rounded-lg p-2 h-40 overflow-y-auto text-sm space-y-1"></div>
         </div>
+      </div>
       </div>
 
       <div class="flex justify-end gap-2 mt-5">

@@ -1,4 +1,4 @@
-import { CENTROS, buildAnios, fetchOptions, fetchIcs, SiaError } from "./sia-client.js";
+import { CENTROS, buildAnios, fetchOptions, fetchIcs, fetchAllSubjects, fetchSubjectDetail, searchSubjects, fetchIcsBySubjects, SiaError } from "./sia-client.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +53,38 @@ export default {
           grupos: (body.grupos || []).map(String),
           asignaturas: (body.asignaturas || []).map(String),
         });
+        return new Response(icsText, {
+          status: 200,
+          headers: { "Content-Type": "text/calendar; charset=utf-8", ...CORS_HEADERS },
+        });
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/asignaturas") {
+        const anio = url.searchParams.get("anio") || "";
+        const asignaturas = await fetchAllSubjects(anio);
+        return json(200, { asignaturas });
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/buscar-asignaturas") {
+        const q = url.searchParams;
+        const limit = Math.min(Math.max(Number(q.get("limit")) || 10, 1), 20);
+        const result = await searchSubjects(q.get("anio") || "", q.get("q") || "", {
+          detalle: q.get("detalle") === "1",
+          limit,
+        });
+        return json(200, result);
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/asignatura-detalle") {
+        const anio = url.searchParams.get("anio") || "";
+        const asignatura = url.searchParams.get("asignatura") || "";
+        const detail = await fetchSubjectDetail(anio, asignatura);
+        return json(200, detail);
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/horario-asignaturas") {
+        const body = await request.json().catch(() => ({}));
+        const icsText = await fetchIcsBySubjects(String(body.anio || ""), body.selections || []);
         return new Response(icsText, {
           status: 200,
           headers: { "Content-Type": "text/calendar; charset=utf-8", ...CORS_HEADERS },

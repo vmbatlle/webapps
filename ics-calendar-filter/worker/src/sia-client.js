@@ -105,6 +105,195 @@ function base64ToText(b64) {
   }
 }
 
+/** Extracts a bracket-balanced JSON array literal starting at `marker` (e.g. "source: ["), respecting quoted strings. */
+function extractJsonArray(text, marker) {
+  const markerIdx = text.indexOf(marker);
+  if (markerIdx === -1) return null;
+  const start = text.indexOf("[", markerIdx);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+async function fetchAsignaturaTabHtml(jar, anio) {
+  await siaFetch(jar, `${BASE}look[conpub]InicioPubHora?entradaPublica=true`);
+  const data = new URLSearchParams({
+    jsonBusquedaAsignaturas: "{}",
+    limpiarParametrosBusqueda: "N",
+    idPestana: "0",
+    ultimoPlanDocente: anio,
+    accesoSecretaria: "null",
+  });
+  const resp = await siaFetch(jar, `${BASE}look[conpub]ActualizarPestanaPubHora?rnd=1.0`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+    body: data.toString(),
+  });
+  if (!resp.ok) throw new SiaError(`ActualizarPestanaPubHora failed with status ${resp.status}`);
+  return decodeLatin1Html(await resp.arrayBuffer());
+}
+
+/** Full, university-wide subject list for a given academic year (independent of plan/curso). */
+export async function fetchAllSubjects(anio, jar = new CookieJar()) {
+  const html = await fetchAsignaturaTabHtml(jar, anio);
+  const arrayText = extractJsonArray(html, "source:");
+  if (!arrayText) throw new SiaError("No se pudo obtener el listado de asignaturas");
+
+  let raw;
+  try {
+    raw = JSON.parse(arrayText);
+  } catch {
+    throw new SiaError("Respuesta inesperada al listar asignaturas");
+  }
+  return raw.map((item) => ({ value: item.value, label: item.text }));
+}
+
+/** Resolves the plan/centro/período/grupo options for one specific subject code. */
+export async function fetchSubjectDetail(anio, asignatura, jar = new CookieJar(), { skipInit = false } = {}) {
+  if (!skipInit) await fetchAsignaturaTabHtml(jar, anio);
+
+  const params = new URLSearchParams({
+    rnd: "1.0",
+    planDocente: anio,
+    asignaturaModal: asignatura,
+    planDocenteSeleccionadoAnteriormente: anio,
+    jsonBusquedaAsignaturas: "{}",
+    limpiarParametrosBusqueda: "N",
+    idPestana: "0",
+    ultimoPlanDocente: "",
+    accesoSecretaria: "null",
+  });
+  const resp = await siaFetch(jar, `${BASE}look[conpub]ActualizarModalBusquedaAsignatura?${params}`);
+  if (!resp.ok) throw new SiaError(`ActualizarModalBusquedaAsignatura failed with status ${resp.status}`);
+
+  let detail;
+  try {
+    detail = await resp.json();
+  } catch {
+    throw new SiaError("Respuesta inesperada al consultar la asignatura");
+  }
+  if (!detail.selecteds) throw new SiaError("Asignatura no encontrada para ese curso académico");
+
+  return {
+    centro: detail.selecteds.centro,
+    plan: detail.selecteds.plan,
+    estudio: detail.selecteds.estudio,
+    periodos: (detail.periodo || []).map((p) => ({ value: p.codigo, label: p.descripcion })),
+    grupos: (detail.grupo || []).map((g) => ({ value: g.codigo, label: g.descripcion })),
+  };
+}
+
+const normalize = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Mirrors the portal's autocomplete (a client-side substring match over "code - name"),
+ * optionally enriching each hit with plan/periodos/grupos. Details are capped because
+ * each one is a subrequest to SIA.
+ */
+export async function searchSubjects(anio, query, { detalle = false, limit = 10 } = {}) {
+  const term = normalize(query.trim());
+  if (!term) throw new SiaError("Falta el texto de búsqueda");
+
+  const jar = new CookieJar();
+  const all = await fetchAllSubjects(anio, jar);
+  const matches = all.filter((s) => normalize(`${s.value} - ${s.label}`).includes(term));
+  const total = matches.length;
+  const page = matches.slice(0, limit);
+
+  if (detalle) {
+    for (const s of page) {
+      try {
+        Object.assign(s, await fetchSubjectDetail(anio, s.value, jar, { skipInit: true }));
+      } catch (err) {
+        s.error = err.message;
+      }
+    }
+  }
+  return { total, asignaturas: page };
+}
+
+async function generateIcsFromSession(jar) {
+  const resp = await siaFetch(jar, `${CTRL}[mtoGenerarICS]`, { method: "POST" });
+  if (!resp.ok) throw new SiaError(`mtoGenerarICS failed with status ${resp.status}`);
+
+  let payload;
+  try {
+    payload = await resp.json();
+  } catch {
+    throw new SiaError("Respuesta inesperada al generar el ICS");
+  }
+  if (payload.code !== 200 || !payload.data?.result) {
+    throw new SiaError(payload.errors || "No se pudo generar el ICS");
+  }
+  return base64ToText(payload.data.result);
+}
+
+/**
+ * Generates an ICS from a free list of subject selections (the "Buscar por asignatura" flow),
+ * each one independently resolved via fetchSubjectDetail: { asignatura, centro, plan, estudio, periodo, grupo }.
+ */
+export async function fetchIcsBySubjects(anio, selections) {
+  if (!selections?.length) throw new SiaError("Debes seleccionar al menos una asignatura y un grupo");
+
+  const jsonBusqueda = {};
+  selections.forEach((sel, i) => {
+    jsonBusqueda[`hash${i}`] = {
+      anoAcademico: anio,
+      asignatura: sel.asignatura,
+      asignaturaDesc: sel.asignaturaDesc || sel.asignatura,
+      centro: sel.centro,
+      centroDesc: sel.centroDesc || "",
+      plan: sel.plan,
+      planDesc: sel.planDesc || "",
+      estudio: sel.estudio,
+      estudioDesc: sel.estudioDesc || "",
+      periodo: sel.periodo,
+      periodoDesc: sel.periodoDesc || "",
+      grupo: sel.grupo,
+      grupoDesc: sel.grupoDesc || "",
+    };
+  });
+
+  const jar = new CookieJar();
+  await fetchAsignaturaTabHtml(jar, anio);
+
+  const mostrarData = new URLSearchParams({
+    planDocente: anio,
+    asignaturaModal: "",
+    jsonBusquedaAsignaturas: JSON.stringify(jsonBusqueda),
+    limpiarParametrosBusqueda: "N",
+    idPestana: "0",
+    ultimoPlanDocente: anio,
+    accesoSecretaria: "null",
+  });
+  const resp = await siaFetch(jar, `${BASE}look[conpub]MostrarPubHora?rnd=1.0`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+    body: mostrarData.toString(),
+  });
+  if (!resp.ok) throw new SiaError(`MostrarPubHora failed with status ${resp.status}`);
+
+  return generateIcsFromSession(jar);
+}
+
 export async function fetchOptions({ anio, centro, plan, curso, trimestre }) {
   const jar = new CookieJar();
   await siaFetch(jar, `${BASE}look[conpub]InicioPubHora?entradaPublica=true`);
@@ -184,19 +373,5 @@ export async function fetchIcs({ anio, centro, plan, curso, trimestre, grupos, a
   });
   if (!r2.ok) throw new SiaError(`MostrarPubHora failed with status ${r2.status}`);
 
-  const r3 = await siaFetch(jar, `${CTRL}[mtoGenerarICS]`, { method: "POST" });
-  if (!r3.ok) throw new SiaError(`mtoGenerarICS failed with status ${r3.status}`);
-
-  let payload;
-  try {
-    payload = await r3.json();
-  } catch {
-    throw new SiaError("Respuesta inesperada al generar el ICS");
-  }
-
-  if (payload.code !== 200 || !payload.data?.result) {
-    throw new SiaError(payload.errors || "No se pudo generar el ICS");
-  }
-
-  return base64ToText(payload.data.result);
+  return generateIcsFromSession(jar);
 }
