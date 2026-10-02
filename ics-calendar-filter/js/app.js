@@ -16,6 +16,22 @@ let courseMetaData = {};
 let calendar = null;
 let selectedDateStr = new Date().toISOString().split('T')[0];
 let expandedCourseKey = null;
+let dotGroups = null;
+const mobileQuery = window.matchMedia('(max-width: 639px)');
+
+// Groups events by day and colour so mobile view can show one "Nx" dot per group.
+function getDotGroup(event) {
+  if (!dotGroups) {
+    dotGroups = new Map();
+    calendar.getEvents().forEach(ev => {
+      const key = `${ev.startStr.split('T')[0]}|${ev.backgroundColor}`;
+      const g = dotGroups.get(key);
+      if (g) g.count++;
+      else dotGroups.set(key, { first: ev.id, count: 1 });
+    });
+  }
+  return dotGroups.get(`${event.startStr.split('T')[0]}|${event.backgroundColor}`);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const calendarEl = document.getElementById('calendar');
@@ -37,6 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
       omitZeroMinute: true
     },
     height: 440,
+    eventsSet: () => { dotGroups = null; },
+    eventClassNames: (arg) => {
+      if (!mobileQuery.matches) return [];
+      return getDotGroup(arg.event).first !== arg.event.id ? ['dot-dup'] : [];
+    },
     datesSet: () => {
       highlightSelectedDay(selectedDateStr);
     },
@@ -50,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   calendar.render();
+  mobileQuery.addEventListener('change', () => calendar.rerenderEvents());
   highlightSelectedDay(selectedDateStr);
 });
 
@@ -401,9 +423,10 @@ function updateStatistics() {
 
 function updateCalendar() {
   calendar.removeAllEvents();
-  const fcEvents = filteredEvents.map(ev => {
+  const fcEvents = filteredEvents.map((ev, i) => {
     const color = courseMetaData[ev.meta.courseKey]?.color || '#2563EB';
     return {
+      id: String(i),
       title: `${ev.meta.name} (Gr. ${ev.meta.group})`,
       start: ev.startDateObj || ev.startDateStr,
       end: ev.endDateObj || ev.endDateStr,

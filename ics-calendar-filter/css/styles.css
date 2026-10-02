@@ -37,6 +37,39 @@
 }
 
 @media (max-width: 639px) {
+  .fc-daygrid-day-events {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    padding: 0 2px;
+  }
+
+  .fc-daygrid-event-harness {
+    margin: 0 !important;
+  }
+
+  .fc-daygrid-event {
+    width: 6px;
+    height: 6px;
+    margin: 0 !important;
+    padding: 0;
+    border-radius: 9999px;
+  }
+
+  .fc-daygrid-event .fc-event-main,
+  .fc-daygrid-event .fc-event-time,
+  .fc-daygrid-event .fc-event-title {
+    display: none;
+  }
+
+  .fc-daygrid-event.dot-dup,
+  .fc-daygrid-event-harness:has(.dot-dup) {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
   #export-btn {
     position: fixed;
     right: 1rem;
