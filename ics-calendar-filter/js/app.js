@@ -109,6 +109,13 @@ function buildFilterUI() {
   const active = Object.keys(courseMetaData).filter(k => !courseMetaData[k].removed).sort();
   const removed = Object.keys(courseMetaData).filter(k => courseMetaData[k].removed).sort();
 
+  if (active.length) {
+    const hint = document.createElement('p');
+    hint.className = "text-gray-400 text-xs text-center";
+    hint.textContent = "Pulsa en cada asignatura para filtrar.";
+    container.appendChild(hint);
+  }
+
   active.concat(removed).forEach((ckey) => {
     container.appendChild(buildCourseRow(ckey));
   });
@@ -248,12 +255,16 @@ function buildKindGroupNode(ckey, kind) {
     childContainer.appendChild(grpLabel);
     leafCheckboxes.push(leafCb);
 
-    leafCb.addEventListener('change', () => updateKindCheckboxState(parentCb, leafCheckboxes));
+    leafCb.addEventListener('change', () => {
+      updateKindCheckboxState(parentCb, leafCheckboxes);
+      applyFilters();
+    });
   });
 
   parentCb.addEventListener('change', () => {
     leafCheckboxes.forEach(cb => cb.checked = parentCb.checked);
     parentCb.indeterminate = false;
+    applyFilters();
   });
 
   wrapper.appendChild(childContainer);
@@ -285,15 +296,6 @@ function toggleCourseRemoved(ckey) {
     expandedCourseKey = null;
   }
   buildFilterUI();
-  applyFilters();
-}
-
-function toggleAllFilters(state) {
-  document.querySelectorAll('#filter-container input.leaf-checkbox').forEach(cb => cb.checked = state);
-  document.querySelectorAll('#filter-container input.kind-checkbox').forEach(cb => {
-    cb.checked = state;
-    cb.indeterminate = false;
-  });
   applyFilters();
 }
 

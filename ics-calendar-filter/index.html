@@ -19,7 +19,7 @@
   <!-- Encabezado / Navegación -->
   <header class="bg-indigo-700 text-white p-4 shadow-md flex flex-wrap justify-between items-center gap-4">
     <h1 class="text-xl font-bold tracking-wide">Calendario Académico</h1>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
       <button type="button" onclick="document.getElementById('help-dialog').showModal()" class="top-bar-button bg-indigo-800/60 hover:bg-indigo-800 text-indigo-100 border-indigo-500/40" aria-haspopup="dialog">
         <span aria-hidden="true">❔</span> Ayuda
       </button>
@@ -43,19 +43,12 @@
     <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-lg font-semibold text-gray-700">Asignaturas</h2>
-        <div class="space-x-1">
-          <button onclick="toggleAllFilters(true)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Seleccionar todo</button>
-          <button onclick="toggleAllFilters(false)" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600">Deseleccionar todo</button>
-        </div>
       </div>
 
       <div id="filter-container" class="flex-1 overflow-y-auto space-y-4 pr-1 text-sm">
         <p class="text-gray-400 text-center py-10">Añade o importa asignaturas desde la barra superior.</p>
       </div>
 
-      <button id="apply-btn" onclick="applyFilters()" disabled class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold py-2 rounded-lg transition">
-        Aplicar Filtros
-      </button>
     </section>
 
     <!-- Columna Derecha: Estadísticas, Calendario y Tabla -->
@@ -145,11 +138,11 @@
         </li>
         <li class="flex gap-3">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">3</span>
-          <div><strong>Aplica los filtros y revisa el resultado.</strong><p class="text-xs text-gray-500 mt-1">Pulsa «Aplicar Filtros» para actualizar el resumen, el calendario y el detalle diario.</p></div>
+          <div><strong>Revisa el resultado.</strong><p class="text-xs text-gray-500 mt-1">El resumen, el calendario y el detalle diario se actualizan al cambiar los filtros.</p></div>
         </li>
         <li class="flex gap-3">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">4</span>
-          <div><strong>Guarda tu horario personalizado.</strong><p class="text-xs text-gray-500 mt-1">Pulsa «Guardar ICS» para descargar solo los eventos que has dejado seleccionados.</p></div>
+          <div><strong>Guarda tu horario personalizado.</strong><p class="text-xs text-gray-500 mt-1">Pulsa «Guardar» para descargar solo los eventos que has dejado seleccionados.</p></div>
         </li>
       </ol>
     </div>

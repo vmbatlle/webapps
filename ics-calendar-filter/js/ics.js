@@ -176,7 +176,6 @@ function parseICSContent(icsText) {
     applyFilters();
 
     document.getElementById('export-btn').disabled = false;
-    document.getElementById('apply-btn').disabled = false;
 
     if (filteredEvents.length > 0 && filteredEvents[0].startDateStr) {
       const firstDate = filteredEvents[0].startDateStr.split('T')[0];
